@@ -9,7 +9,7 @@
 <?import javafx.scene.control.TitledPane?>
 <?import javafx.scene.layout.AnchorPane?>
 
-<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="412.0" prefWidth="588.0" xmlns="http://javafx.com/javafx/20.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="org.example.clientsevermsgexample.MainController">
+<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="412.0" prefWidth="588.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="org.example.clientsevermsgexample.MainController">
    <children>
       <Label fx:id="server_lbl" layoutX="25.0" layoutY="24.0" text="Server" />
       <TextField fx:id="urlName" layoutX="65.0" layoutY="20.0" prefHeight="25.0" prefWidth="356.0" />
@@ -42,8 +42,8 @@
                 <content>
                     <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0">
                         <children>
-                            <Button fx:id="user1_client" layoutX="100.0" mnemonicParsing="false"  text="User 1" />
-                            <Button fx:id="user2_server" layoutX="350.0" mnemonicParsing="false"  text="User 2" />
+                            <Button fx:id="user1_client" layoutX="100.0" mnemonicParsing="false" onAction="#startChatClient" text="User 1" />
+                            <Button fx:id="user2_server" layoutX="350.0" mnemonicParsing="false" onAction="#startChatServer" text="User 2" />
                         </children>
                     </AnchorPane>
                 </content>

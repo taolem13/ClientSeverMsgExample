@@ -1,15 +1,16 @@
 package org.example.clientsevermsgexample;
 
-
-
+import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
+import javafx.geometry.Insets;
 import javafx.scene.Group;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
 import java.io.DataInputStream;
@@ -24,6 +25,7 @@ import java.util.ResourceBundle;
 import static java.lang.Thread.sleep;
 
 public class MainController implements Initializable {
+
     @FXML
     private ComboBox dropdownPort;
 
@@ -43,8 +45,6 @@ public class MainController implements Initializable {
     @FXML
     private Button clearBtn;
 
-
-
     @FXML
     private TextArea resultArea;
 
@@ -60,8 +60,13 @@ public class MainController implements Initializable {
     @FXML
     private TextField urlName;
 
-    Socket socket1;
+    @FXML
+    private Button user1_client;
 
+    @FXML
+    private Button user2_server;
+
+    Socket socket1;
     Label lb122, lb12;
     TextField msgText;
 
@@ -82,10 +87,7 @@ public class MainController implements Initializable {
             resultArea.appendText(host + " not listening on port "
                     + port + "\n");
         }
-
-
     }
-
 
     @FXML
     void clearBtn(ActionEvent event) {
@@ -93,8 +95,6 @@ public class MainController implements Initializable {
         urlName.setText("");
 
     }
-
-
 
     @FXML
     void startServer(ActionEvent event) {
@@ -169,7 +169,6 @@ public class MainController implements Initializable {
         javafx.application.Platform.runLater(() -> lb12.setText(message + "\n"));
     }
 
-
     @FXML
     void startClient(ActionEvent event) {
         Stage stage = new Stage();
@@ -197,14 +196,9 @@ public class MainController implements Initializable {
         stage.setScene(scene);
         stage.setTitle("Client");
         stage.show();
-
-
     }
 
-
     private void connectToServer(ActionEvent event) {
-
-
         try {
             socket1 = new Socket("localhost", 6666);
 
@@ -221,13 +215,147 @@ public class MainController implements Initializable {
         } catch (Exception e) {
             updateTextClient("Error: " + e.getMessage() + "\n");
         }
-
-
     }
 
     private void updateTextClient(String message) {
         // Run on the UI thread
         javafx.application.Platform.runLater(() -> lb122.setText(message + "\n"));
+    }
+
+    @FXML private TextArea serverChatArea, clientChatArea;
+    @FXML private TextField serverMsgField, clientMsgField;
+    @FXML private Button serverSendBtn, clientSendBtn;
+
+    private DataOutputStream serverOut, clientOut;
+    private DataInputStream serverIn, clientIn;
+
+    private Socket clientSocket, socketToServer;
+
+    // Server chat functionality
+    @FXML
+    void startChatServer(ActionEvent event) {
+        Stage stage = new Stage();
+        VBox root = new VBox(10);
+        root.setPadding(new Insets(10));
+
+        serverChatArea = new TextArea();
+        serverChatArea.setEditable(false);
+        serverMsgField = new TextField();
+        serverMsgField.setPromptText("Enter message");
+        serverSendBtn = new Button("Send");
+        serverSendBtn.setOnAction(this::sendMessageFromServer);
+
+        root.getChildren().addAll(new Label("Server"), serverChatArea, serverMsgField, serverSendBtn);
+
+        stage.setScene(new Scene(root, 400, 300));
+        stage.setTitle("Server");
+        stage.show();
+
+        new Thread(this::runChatServer).start();
+
+    }
+
+    private void runChatServer() {
+        try (ServerSocket serverSocket = new ServerSocket(6666)) {
+            updateServerUI("Server is running...");
+            clientSocket = serverSocket.accept();
+            updateServerUI("Client connected!");
+
+            serverIn = new DataInputStream(clientSocket.getInputStream());
+            serverOut = new DataOutputStream(clientSocket.getOutputStream());
+
+            new Thread(() -> {
+                try {
+                    String msg;
+                    while ((msg = serverIn.readUTF()) != null) {
+                        updateServerUI("Client: " + msg);
+                    }
+                } catch (IOException e) {
+                    updateServerUI("Client disconnected.");
+                }
+            }).start();
+        } catch (IOException e) {
+            updateServerUI("Error: " + e.getMessage());
+        }
+    }
+
+    private void sendMessageFromServer(ActionEvent event) {
+        String msg = serverMsgField.getText();
+        if (msg.isEmpty()) return;
+        try {
+            serverOut.writeUTF(msg);
+            updateServerUI("Server: " + msg);
+            serverMsgField.clear();
+        } catch (IOException e) {
+            updateServerUI("Send failed: " + e.getMessage());
+        }
+    }
+
+    private void updateServerUI(String message) {
+        Platform.runLater(() -> serverChatArea.appendText(message + "\n"));
+    }
+
+    // Client chat functionality
+    @FXML
+    void startChatClient(ActionEvent event) {
+        Stage stage = new Stage();
+        VBox root = new VBox(10);
+        root.setPadding(new Insets(10));
+
+        clientChatArea = new TextArea();
+        clientChatArea.setEditable(false);
+        clientMsgField = new TextField();
+        clientMsgField.setPromptText("Enter message");
+        clientSendBtn = new Button("Send");
+        clientSendBtn.setOnAction(this::sendMessageFromClient);
+
+        root.getChildren().addAll(new Label("Client"), clientChatArea, clientMsgField, clientSendBtn);
+
+        stage.setScene(new Scene(root, 400, 300));
+        stage.setTitle("Client");
+        stage.show();
+
+        new Thread(this::connectToChatServer).start();
+
+    }
+
+    private void connectToChatServer() {
+        try {
+            socketToServer = new Socket("localhost", 6666);
+            clientOut = new DataOutputStream(socketToServer.getOutputStream());
+            clientIn = new DataInputStream(socketToServer.getInputStream());
+
+            updateClientUI("Connected to server!");
+
+            new Thread(() -> {
+                try {
+                    String msg;
+                    while ((msg = clientIn.readUTF()) != null) {
+                        updateClientUI("Server: " + msg);
+                    }
+                } catch (IOException e) {
+                    updateClientUI("Server disconnected.");
+                }
+            }).start();
+        } catch (IOException e) {
+            updateClientUI("Error: " + e.getMessage());
+        }
+    }
+
+    private void sendMessageFromClient(ActionEvent event) {
+        String msg = clientMsgField.getText();
+        if (msg.isEmpty()) return;
+        try {
+            clientOut.writeUTF(msg);
+            updateClientUI("Client: " + msg);
+            clientMsgField.clear();
+        } catch (IOException e) {
+            updateClientUI("Send failed: " + e.getMessage());
+        }
+    }
+
+    private void updateClientUI(String message) {
+        Platform.runLater(() -> clientChatArea.appendText(message + "\n"));
     }
 
 }
